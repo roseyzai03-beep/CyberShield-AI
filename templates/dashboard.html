@@ -1,0 +1,63 @@
+{% extends 'base.html' %}
+{% set active = 'dashboard' %}
+{% block title %}Dashboard — CyberShield AI{% endblock %}
+
+{% block body %}
+<div class="container">
+    <div class="page-head">
+        <h1>Security Overview</h1>
+        <div class="subtitle">Every file and text scan recorded by the engine.</div>
+    </div>
+
+    <div class="grid grid-3" style="margin-bottom:26px;">
+        <div class="glass-card stat-card">
+            <div class="value">{{ summary.total_scans }}</div>
+            <div class="label">Total Scans</div>
+        </div>
+        <div class="glass-card stat-card">
+            <div class="value">{{ summary.avg_score }}</div>
+            <div class="label">Avg Risk Score</div>
+        </div>
+        <div class="glass-card stat-card">
+            <div class="value">{{ summary.level_counts.Critical + summary.level_counts.High }}</div>
+            <div class="label">High + Critical</div>
+        </div>
+    </div>
+
+    <div class="grid grid-3" style="margin-bottom:30px;">
+        <div class="glass-card stat-card" style="border-color: rgba(52,211,153,0.4);">
+            <div class="value" style="color:var(--success); text-shadow:0 0 14px rgba(52,211,153,0.5);">{{ summary.level_counts.Low }}</div>
+            <div class="label">Low</div>
+        </div>
+        <div class="glass-card stat-card" style="border-color: rgba(251,191,36,0.4);">
+            <div class="value" style="color:var(--warning); text-shadow:0 0 14px rgba(251,191,36,0.5);">{{ summary.level_counts.Medium }}</div>
+            <div class="label">Medium</div>
+        </div>
+        <div class="glass-card stat-card" style="border-color: rgba(244,63,94,0.4);">
+            <div class="value" style="color:var(--critical); text-shadow:0 0 14px rgba(244,63,94,0.5);">{{ summary.level_counts.High + summary.level_counts.Critical }}</div>
+            <div class="label">High / Critical</div>
+        </div>
+    </div>
+
+    <div class="glass-card" style="padding:0;">
+        <table>
+            <thead>
+                <tr><th>Source</th><th>Name</th><th>Score</th><th>Level</th><th>Date</th></tr>
+            </thead>
+            <tbody>
+            {% for s in scans %}
+                <tr onclick="window.location='{{ url_for('result', scan_id=s.id) }}'" style="cursor:pointer;">
+                    <td><span class="source-tag">{{ s.source_type }}</span></td>
+                    <td>{{ s.filename }}</td>
+                    <td>{{ s.risk_score }}/100</td>
+                    <td><span class="badge badge-{{ s.risk_level }}">{{ s.risk_level }}</span></td>
+                    <td>{{ s.created_at[:19].replace('T', ' ') }}</td>
+                </tr>
+            {% else %}
+                <tr><td colspan="5" style="text-align:center; color:var(--text-muted);">No scans yet</td></tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

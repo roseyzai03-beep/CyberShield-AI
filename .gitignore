@@ -1,0 +1,5 @@
+__pycache__/
+*.pyc
+cybersecurity.db
+static/uploads/*
+!static/uploads/.gitkeep

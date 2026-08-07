@@ -1,0 +1,57 @@
+{% extends 'base.html' %}
+{% set active = 'home' %}
+{% block title %}AI Cybersecurity Risk Analyzer — CyberShield AI{% endblock %}
+
+{% block body %}
+<div class="container">
+    {% with messages = get_flashed_messages() %}
+        {% for m in messages %}<div class="flash">{{ m }}</div>{% endfor %}
+    {% endwith %}
+
+    <div class="hero">
+        <h1>AI-Powered Cybersecurity Risk Analyzer</h1>
+        <p>Upload a file or paste any text and let the engine detect suspicious patterns, entropy anomalies, and known attack signatures in seconds.</p>
+        <a href="{{ url_for('upload') }}" class="btn btn-primary">🚀 Start a Scan</a>
+        <a href="{{ url_for('text_detection') }}" class="btn btn-secondary">📝 Detect Text</a>
+    </div>
+
+    <div class="grid grid-3">
+        <div class="glass-card">
+            <div class="section-title" style="font-size:1.1rem;">🛡️ Signature Detection</div>
+            <p style="color:var(--text-secondary); font-size:0.9rem;">Scans contents against known malicious code patterns and shell/command injection signatures.</p>
+        </div>
+        <div class="glass-card">
+            <div class="section-title" style="font-size:1.1rem;">📊 Entropy Analysis</div>
+            <p style="color:var(--text-secondary); font-size:0.9rem;">Detects packed or encrypted payloads by measuring the randomness of file contents.</p>
+        </div>
+        <div class="glass-card">
+            <div class="section-title" style="font-size:1.1rem;">📈 Risk Dashboard</div>
+            <p style="color:var(--text-secondary); font-size:0.9rem;">Track every scan's risk score and level over time from a single dashboard.</p>
+        </div>
+    </div>
+
+    {% if recent_scans %}
+    <div style="margin-top:50px;">
+        <div class="section-title">Recent Scans</div>
+        <div class="glass-card" style="padding:0;">
+            <table>
+                <thead>
+                    <tr><th>Source</th><th>Name</th><th>Score</th><th>Level</th><th>Date</th></tr>
+                </thead>
+                <tbody>
+                {% for s in recent_scans %}
+                    <tr onclick="window.location='{{ url_for('result', scan_id=s.id) }}'" style="cursor:pointer;">
+                        <td><span class="source-tag">{{ s.source_type }}</span></td>
+                        <td>{{ s.filename }}</td>
+                        <td>{{ s.risk_score }}/100</td>
+                        <td><span class="badge badge-{{ s.risk_level }}">{{ s.risk_level }}</span></td>
+                        <td>{{ s.created_at[:19].replace('T', ' ') }}</td>
+                    </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

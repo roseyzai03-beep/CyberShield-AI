@@ -1,0 +1,9 @@
+<nav class="navbar">
+    <div class="brand"><span class="dot"></span><a href="{{ url_for('home') }}">CyberShield AI</a></div>
+    <div class="nav-links">
+        <a href="{{ url_for('home') }}" class="{{ 'active' if active == 'home' }}">Home</a>
+        <a href="{{ url_for('upload') }}" class="{{ 'active' if active == 'upload' }}">Scan File</a>
+        <a href="{{ url_for('text_detection') }}" class="{{ 'active' if active == 'text' }}">Text Detection</a>
+        <a href="{{ url_for('dashboard') }}" class="{{ 'active' if active == 'dashboard' }}">Dashboard</a>
+    </div>
+</nav>

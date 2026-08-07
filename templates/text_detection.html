@@ -1,0 +1,172 @@
+{% extends 'base.html' %}
+{% set active = 'text' %}
+{% block title %}Text Detection — CyberShield AI{% endblock %}
+
+{% block body %}
+<div class="container" style="max-width:720px;">
+  <div class="page-head">
+    <h1>AI Text Threat Detection</h1>
+    <div class="subtitle">Analyze suspicious messages, code, or logs for feared and malicious keywords.</div>
+  </div>
+
+  <div class="glass-card">
+    <textarea id="textInput" rows="7" placeholder="Paste or type your text here... (e.g. eval, malware, powershell, ransomware, base64.b64decode)" style="resize:vertical;"></textarea>
+
+    <div class="btn-row">
+      <button id="clearBtn" class="btn btn-secondary" type="button">🗑️ Clear</button>
+      <button id="detectBtn" class="btn btn-primary" type="button">🔍 Detect Text</button>
+    </div>
+
+    <div class="status-msg" id="status"></div>
+
+    <div class="glass-card" id="resultBox" style="margin-top:20px; background:rgba(255,255,255,0.02);">
+      <div style="text-align:center;">
+        <div class="risk-pill Low" id="riskPill">LOW RISK</div>
+        <div id="riskScoreText" style="color:var(--text-secondary); font-size:0.88rem;">Risk Score: 0/100</div>
+      </div>
+
+      <div class="risk-meter" style="margin-top:14px;">
+        <div class="risk-meter-fill" id="riskFill" style="width:0%;"></div>
+      </div>
+
+      <div class="stat-grid">
+        <div class="stat-mini"><div class="label">Characters</div><div class="value" id="charCount">0</div></div>
+        <div class="stat-mini"><div class="label">Words</div><div class="value" id="wordCount">0</div></div>
+        <div class="stat-mini"><div class="label">Language</div><div class="value" id="langResult" style="font-size:0.9rem;">-</div></div>
+        <div class="stat-mini"><div class="label">Keywords Hit</div><div class="value" id="kwCount">0</div></div>
+      </div>
+
+      <div style="margin-top:18px;">
+        <div style="font-size:0.8rem; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.5px; margin-bottom:10px;">Detected Threat Indicators</div>
+        <ul class="threat-list" id="threatList"></ul>
+      </div>
+
+      <div id="kwBadges" style="margin-top:12px; display:flex; flex-wrap:wrap; gap:8px;"></div>
+
+      <div style="text-align:center; margin-top:20px;">
+        <a href="#" id="viewResultLink" class="btn btn-primary" style="display:none;">View Full Result →</a>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const ANALYZE_URL = "{{ url_for('api_analyze_text') }}";
+
+const textInput = document.getElementById('textInput');
+const detectBtn = document.getElementById('detectBtn');
+const clearBtn = document.getElementById('clearBtn');
+const statusEl = document.getElementById('status');
+const resultBox = document.getElementById('resultBox');
+
+const riskPill = document.getElementById('riskPill');
+const riskScoreText = document.getElementById('riskScoreText');
+const riskFill = document.getElementById('riskFill');
+const charCount = document.getElementById('charCount');
+const wordCount = document.getElementById('wordCount');
+const langResult = document.getElementById('langResult');
+const kwCount = document.getElementById('kwCount');
+const threatList = document.getElementById('threatList');
+const kwBadges = document.getElementById('kwBadges');
+const viewResultLink = document.getElementById('viewResultLink');
+
+clearBtn.addEventListener('click', () => {
+  textInput.value = '';
+  resultBox.style.display = 'none';
+  statusEl.textContent = '';
+  textInput.focus();
+});
+
+detectBtn.addEventListener('click', async () => {
+  const text = textInput.value.trim();
+  if (!text) {
+    statusEl.textContent = '⚠️ Please enter some text first.';
+    resultBox.style.display = 'none';
+    return;
+  }
+
+  statusEl.textContent = 'Analyzing...';
+  detectBtn.disabled = true;
+
+  try {
+    const res = await fetch(ANALYZE_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ text })
+    });
+
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      statusEl.textContent = '❌ ' + (err.error || 'Something went wrong.');
+      return;
+    }
+
+    const data = await res.json();
+    const keywords = data.matched_keywords || [];
+
+    riskPill.textContent = data.risk_level.toUpperCase() + ' RISK';
+    riskPill.className = 'risk-pill ' + data.risk_level;
+    riskScoreText.textContent = 'Risk Score: ' + data.risk_score + '/100';
+
+    resultBox.style.display = 'block';
+    riskFill.style.width = '0%';
+    requestAnimationFrame(() => { riskFill.style.width = data.risk_score + '%'; });
+
+    charCount.textContent = data.char_count;
+    wordCount.textContent = data.word_count;
+    kwCount.textContent = keywords.length;
+    langResult.textContent = detectLanguage(text);
+
+    threatList.innerHTML = '';
+    (data.threats || []).forEach(t => {
+      const li = document.createElement('li');
+      li.textContent = t;
+      threatList.appendChild(li);
+    });
+
+    kwBadges.innerHTML = '';
+    keywords.forEach(kw => {
+      const span = document.createElement('span');
+      span.className = 'badge badge-' + data.risk_level;
+      span.textContent = kw;
+      kwBadges.appendChild(span);
+    });
+
+    viewResultLink.href = data.result_url;
+    viewResultLink.style.display = 'inline-block';
+    statusEl.textContent = '✅ Detection complete!';
+  } catch (e) {
+    statusEl.textContent = '❌ Could not reach the server.';
+  } finally {
+    detectBtn.disabled = false;
+  }
+});
+
+function detectLanguage(text) {
+  const ranges = {
+    'Tamil': /[\u0B80-\u0BFF]/g,
+    'Hindi': /[\u0900-\u097F]/g,
+    'Telugu': /[\u0C00-\u0C7F]/g,
+    'Kannada': /[\u0C80-\u0CFF]/g,
+    'Malayalam': /[\u0D00-\u0D7F]/g,
+    'Arabic': /[\u0600-\u06FF]/g,
+    'Chinese': /[\u4E00-\u9FFF]/g,
+    'Japanese': /[\u3040-\u30FF]/g,
+    'Korean': /[\uAC00-\uD7AF]/g,
+    'Russian': /[\u0400-\u04FF]/g,
+  };
+  for (const [lang, regex] of Object.entries(ranges)) {
+    const matches = text.match(regex);
+    if (matches && matches.length > text.length * 0.15) return lang;
+  }
+  if (/^[a-zA-Z0-9\s.,!?'"()\-:;\/@#_+=%&*]+$/.test(text)) return 'English';
+  return 'Mixed / Unknown';
+}
+
+textInput.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter' && e.ctrlKey) detectBtn.click();
+});
+</script>
+{% endblock %}

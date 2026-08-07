@@ -1,0 +1,37 @@
+{% extends 'base.html' %}
+{% set active = 'upload' %}
+{% block title %}Scan File — CyberShield AI{% endblock %}
+
+{% block body %}
+<div class="container" style="max-width:680px;">
+    {% with messages = get_flashed_messages() %}
+        {% for m in messages %}<div class="flash">{{ m }}</div>{% endfor %}
+    {% endwith %}
+
+    <div class="page-head">
+        <h1>Scan a File</h1>
+        <div class="subtitle">Static analysis for suspicious signatures, entropy and embedded indicators.</div>
+    </div>
+
+    <div class="glass-card">
+        <p style="color:var(--text-secondary); margin-bottom:24px; font-size:0.9rem;">
+            Supported: .txt .log .csv .json .pcap .exe .py .zip &nbsp;|&nbsp; Max 25MB
+        </p>
+
+        <form id="upload-form" method="POST" enctype="multipart/form-data">
+            <label for="file-input">
+                <div class="upload-zone" id="upload-zone">
+                    <div class="icon">📁</div>
+                    <div>Click or drag a file here to upload</div>
+                    <div id="file-name"></div>
+                </div>
+            </label>
+            <input type="file" id="file-input" name="file" required>
+
+            <div style="text-align:center; margin-top:26px;">
+                <button type="submit" class="btn btn-primary" id="submit-btn">🔍 Analyze File</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

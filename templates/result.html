@@ -1,0 +1,69 @@
+{% extends 'base.html' %}
+{% set active = 'dashboard' %}
+{% block title %}Scan Result — CyberShield AI{% endblock %}
+
+{% block body %}
+<div class="container" style="max-width:780px;">
+    <div class="glass-card">
+        <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px;">
+            <div>
+                <span class="source-tag">{{ scan.source_type }} scan</span>
+                <div class="section-title" style="margin:8px 0 4px;">{{ scan.filename }}</div>
+                <div style="color:var(--text-muted); font-size:0.85rem;">Scanned on {{ scan.created_at[:19].replace('T',' ') }}</div>
+            </div>
+            <span class="badge badge-{{ scan.risk_level }}">{{ scan.risk_level }} Risk</span>
+        </div>
+
+        <div style="margin-top:18px;">
+            <div style="display:flex; justify-content:space-between; font-size:0.85rem; color:var(--text-secondary);">
+                <span>Risk Score</span><span>{{ scan.risk_score }}/100</span>
+            </div>
+            <div class="risk-meter">
+                <div class="risk-meter-fill" data-score="{{ scan.risk_score }}" style="width:0%;"></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="grid grid-2" style="margin-top:22px;">
+        {% if scan.source_type == 'Text' %}
+            <div class="glass-card stat-card">
+                <div class="value">{{ scan.details.get('word_count', 0) }}</div>
+                <div class="label">Words</div>
+            </div>
+            <div class="glass-card stat-card">
+                <div class="value">{{ scan.details.get('char_count', 0) }}</div>
+                <div class="label">Characters</div>
+            </div>
+        {% else %}
+            <div class="glass-card stat-card">
+                <div class="value">{{ scan.details.get('entropy', 0) }}</div>
+                <div class="label">Entropy (/8)</div>
+            </div>
+            <div class="glass-card stat-card">
+                <div class="value">{{ (scan.details.get('file_size_bytes', 0) / 1024) | round(1) }} KB</div>
+                <div class="label">File Size</div>
+            </div>
+        {% endif %}
+    </div>
+
+    <div class="glass-card" style="margin-top:22px;">
+        <div class="section-title" style="font-size:1.1rem;">🧬 Detected Threat Indicators</div>
+        <ul class="threat-list">
+            {% for t in scan.threats %}<li>{{ t }}</li>{% endfor %}
+        </ul>
+
+        {% if scan.details.get('matched_keywords') %}
+        <div style="margin-top:16px; display:flex; flex-wrap:wrap; gap:8px;">
+            {% for kw in scan.details.get('matched_keywords') %}
+                <span class="badge badge-High">{{ kw }}</span>
+            {% endfor %}
+        </div>
+        {% endif %}
+    </div>
+
+    <div style="text-align:center; margin-top:30px;">
+        <a href="{{ url_for('upload') }}" class="btn btn-secondary">Scan Another File</a>
+        <a href="{{ url_for('dashboard') }}" class="btn btn-primary">View Dashboard</a>
+    </div>
+</div>
+{% endblock %}
