@@ -34,6 +34,15 @@
                 <div class="value">{{ scan.details.get('char_count', 0) }}</div>
                 <div class="label">Characters</div>
             </div>
+        {% elif scan.source_type == 'Voice' %}
+            <div class="glass-card stat-card">
+                <div class="value">{{ scan.details.get('predicted_label', 'N/A') | capitalize }}</div>
+                <div class="label">Predicted Label</div>
+            </div>
+            <div class="glass-card stat-card">
+                <div class="value">{{ scan.details.get('confidence', 0) }}%</div>
+                <div class="label">Confidence</div>
+            </div>
         {% else %}
             <div class="glass-card stat-card">
                 <div class="value">{{ scan.details.get('entropy', 0) }}</div>
@@ -62,7 +71,13 @@
     </div>
 
     <div style="text-align:center; margin-top:30px;">
-        <a href="{{ url_for('upload') }}" class="btn btn-secondary">Scan Another File</a>
+        {% if scan.source_type == 'Voice' %}
+            <a href="{{ url_for('voice_detection') }}" class="btn btn-secondary">Scan Another Voice</a>
+        {% elif scan.source_type == 'Text' %}
+            <a href="{{ url_for('text_detection') }}" class="btn btn-secondary">Scan Another Text</a>
+        {% else %}
+            <a href="{{ url_for('upload') }}" class="btn btn-secondary">Scan Another File</a>
+        {% endif %}
         <a href="{{ url_for('dashboard') }}" class="btn btn-primary">View Dashboard</a>
     </div>
 </div>

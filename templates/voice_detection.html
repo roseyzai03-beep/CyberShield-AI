@@ -1,0 +1,108 @@
+{% extends 'base.html' %}
+{% set active = 'voice' %}
+{% block title %}Voice Detection — CyberShield AI{% endblock %}
+
+{% block body %}
+<div class="container" style="max-width:680px;">
+    <div class="page-head">
+        <h1>Deepfake Voice Detection</h1>
+        <div class="subtitle">Upload an audio clip to check whether the voice is real or AI-generated.</div>
+    </div>
+
+    <div class="glass-card">
+        <p style="color:var(--text-secondary); margin-bottom:24px; font-size:0.9rem;">
+            Supported: .wav .mp3 .m4a &nbsp;|&nbsp; Best results with 2-second clips
+        </p>
+
+        <label for="audio-input">
+            <div class="upload-zone" id="upload-zone">
+                <div class="icon">🎙️</div>
+                <div>Click or drag an audio file here to upload</div>
+                <div id="file-name"></div>
+            </div>
+        </label>
+        <input type="file" id="audio-input" accept=".wav,.mp3,.m4a" style="display:none;">
+
+        <div style="text-align:center; margin-top:26px;">
+            <button type="button" class="btn btn-primary" id="analyze-btn" disabled>🔍 Analyze Voice</button>
+        </div>
+
+        <div id="loading-state" style="display:none; text-align:center; margin-top:24px; color:var(--text-secondary);">
+            <div id="step-text">Processing audio...</div>
+        </div>
+
+        <div id="result-box" style="display:none; margin-top:28px; padding:20px; border-radius:12px; background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.08);">
+            <h3 id="result-label" style="margin:0 0 8px 0;"></h3>
+            <p id="result-confidence" style="color:var(--text-secondary); margin:0 0 12px 0;"></p>
+            <div id="result-risk" style="font-weight:600;"></div>
+            <a id="result-link" href="#" style="display:inline-block; margin-top:14px; color:var(--accent);">View full result →</a>
+        </div>
+
+        <div id="error-box" style="display:none; margin-top:20px; color:#ff6b6b;"></div>
+    </div>
+</div>
+
+<script>
+const audioInput = document.getElementById('audio-input');
+const uploadZone = document.getElementById('upload-zone');
+const fileNameDisplay = document.getElementById('file-name');
+const analyzeBtn = document.getElementById('analyze-btn');
+const loadingState = document.getElementById('loading-state');
+const resultBox = document.getElementById('result-box');
+const errorBox = document.getElementById('error-box');
+
+let selectedFile = null;
+
+uploadZone.addEventListener('click', () => audioInput.click());
+
+audioInput.addEventListener('change', () => {
+    if (audioInput.files.length > 0) {
+        selectedFile = audioInput.files[0];
+        fileNameDisplay.textContent = selectedFile.name;
+        analyzeBtn.disabled = false;
+    }
+});
+
+analyzeBtn.addEventListener('click', async () => {
+    if (!selectedFile) return;
+
+    resultBox.style.display = 'none';
+    errorBox.style.display = 'none';
+    loadingState.style.display = 'block';
+    analyzeBtn.disabled = true;
+
+    const formData = new FormData();
+    formData.append('audio', selectedFile);
+
+    try {
+        const response = await fetch('/api/analyze-voice', {
+            method: 'POST',
+            body: formData
+        });
+        const data = await response.json();
+
+        loadingState.style.display = 'none';
+        analyzeBtn.disabled = false;
+
+        if (data.error) {
+            errorBox.textContent = data.error;
+            errorBox.style.display = 'block';
+            return;
+        }
+
+        const label = data.predicted_label === 'spoof' ? '⚠️ Fake Voice Detected' : '✅ Voice Appears Authentic';
+        document.getElementById('result-label').textContent = label;
+        document.getElementById('result-confidence').textContent = `Confidence: ${data.confidence}%`;
+        document.getElementById('result-risk').textContent = `Risk Level: ${data.risk_level} (Score: ${data.risk_score}/100)`;
+        document.getElementById('result-link').href = data.result_url;
+        resultBox.style.display = 'block';
+
+    } catch (err) {
+        loadingState.style.display = 'none';
+        analyzeBtn.disabled = false;
+        errorBox.textContent = 'Something went wrong. Please try again.';
+        errorBox.style.display = 'block';
+    }
+});
+</script>
+{% endblock %}

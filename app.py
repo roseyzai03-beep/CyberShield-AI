@@ -3,6 +3,7 @@ from flask import Flask, render_template, request, redirect, url_for, flash, jso
 from werkzeug.utils import secure_filename
 from risk_engine import analyze_file, analyze_text, get_risk_summary
 from database import init_db, save_scan, get_all_scans, get_scan_by_id
+from ml_model.voice_analysis import analyze_voice
 UPLOAD_FOLDER = os.path.join('static', 'uploads')
 ALLOWED_EXTENSIONS = {'txt', 'log', 'csv', 'json', 'pcap', 'exe', 'py', 'zip'}
 
@@ -72,6 +73,48 @@ def result(scan_id):
 def text_detection():
     return render_template('text_detection.html')
 
+@app.route('/voice-detection')
+def voice_detection():
+    return render_template('voice_detection.html')
+
+
+@app.route('/api/analyze-voice', methods=['POST'])
+def api_analyze_voice():
+    if 'audio' not in request.files:
+        return jsonify({'error': 'No audio file provided'}), 400
+
+    file = request.files['audio']
+    if file.filename == '':
+        return jsonify({'error': 'No audio file selected'}), 400
+
+    filename = secure_filename(file.filename)
+    filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+    file.save(filepath)
+
+    try:
+        analysis = analyze_voice(filepath)
+    except Exception as e:
+        return jsonify({'error': f'Audio analysis failed: {str(e)}'}), 500
+
+    scan_id = save_scan(
+        filename=filename,
+        risk_score=analysis['risk_score'],
+        risk_level=analysis['risk_level'],
+        threats=analysis['threats'],
+        details=analysis['details'],
+        source_type='Voice'
+    )
+
+    return jsonify({
+        'scan_id': scan_id,
+        'risk_score': analysis['risk_score'],
+        'risk_level': analysis['risk_level'],
+        'threats': analysis['threats'],
+        'predicted_label': analysis['details'].get('predicted_label'),
+        'confidence': analysis['details'].get('confidence'),
+        'source_type': 'Voice',
+        'result_url': url_for('result', scan_id=scan_id)
+    })
 
 @app.route('/api/analyze-text', methods=['POST'])
 def api_analyze_text():

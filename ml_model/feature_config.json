@@ -1,0 +1,32 @@
+{
+  "sample_rate": 16000,
+  "duration_seconds": 2,
+  "n_mels": 128,
+  "img_size": 128,
+  "preprocessing_steps": [
+    "load mono at 16kHz",
+    "MP3 round-trip normalize (128kbps) \u2014 required to avoid compression-artifact shortcut bias",
+    "trim silence (top_db=20)",
+    "peak normalize to 1.0",
+    "pad/truncate to 2 seconds",
+    "mel-spectrogram (n_mels=128), power_to_db, normalize 0-255, resize to 128x128, convert to 3-channel RGB",
+    "EfficientNet preprocess_input before model.predict()"
+  ],
+  "classes": [
+    "bonafide",
+    "spoof"
+  ],
+  "model_input_shape": [
+    128,
+    128,
+    3
+  ],
+  "model_output": "softmax over 2 classes: [bonafide, spoof]",
+  "test_set_performance": {
+    "accuracy": 0.77,
+    "spoof_f1": 0.74,
+    "spoof_precision": 0.86,
+    "spoof_recall": 0.65,
+    "bonafide_f1": 0.8
+  }
+}
