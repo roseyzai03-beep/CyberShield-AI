@@ -7,7 +7,18 @@ produces a risk score, risk level, and list of detected threats.
 import os
 import re
 import math
+import pickle
 from collections import Counter
+
+# Load trained text classification model
+MODEL_PATH = os.path.join(
+    os.path.dirname(__file__),
+    "ml_model",
+    "text_model.pkl"
+)
+
+with open(MODEL_PATH, "rb") as f:
+    TEXT_MODEL = pickle.load(f)
 
 # Keyword / pattern signatures that raise suspicion
 SUSPICIOUS_PATTERNS = {
@@ -163,61 +174,49 @@ FEARED_KEYWORDS = {
 
 
 def analyze_text(text: str) -> dict:
-    """Scan a raw block of text for suspicious code patterns, feared words,
-    embedded IPs/URLs, and obfuscation hints. Mirrors analyze_file()."""
-    threats = []
-    matched_keywords = []
-    score = 0
-    lowered = text.lower()
+    """
+    Analyze text using the trained TF-IDF + Multinomial Naive Bayes model.
+    0 = ham/real
+    1 = spam
+    """
 
-    # 1. Code / command injection signatures
-    for pattern, description in SUSPICIOUS_PATTERNS.items():
-        if pattern.lower() in lowered:
-            threats.append(description)
-            matched_keywords.append(pattern)
-            score += 12
+    # Get prediction
+    prediction = int(TEXT_MODEL.predict([text])[0])
 
-    # 2. Feared / social-engineering keywords
-    for keyword, description in FEARED_KEYWORDS.items():
-        if keyword in lowered and keyword not in matched_keywords:
-            if description not in threats:
-                threats.append(description)
-            matched_keywords.append(keyword)
-            score += 8
+    # Get probability if the classifier supports it
+    probabilities = TEXT_MODEL.predict_proba([text])[0]
+    spam_probability = float(probabilities[1])
 
-    # 3. Embedded IPs and URLs
-    ip_matches = re.findall(r'\b(?:\d{1,3}\.){3}\d{1,3}\b', text)
-    if ip_matches:
-        threats.append(f'Embedded IP address(es) found ({len(ip_matches)})')
-        score += 6 * min(len(ip_matches), 3)
+    # Convert spam probability to a 0-100 risk score
+    score = round(spam_probability * 100)
 
-    url_matches = re.findall(r'https?://[^\s\'"]+', text)
-    if url_matches:
-        threats.append(f'Embedded URL(s) found ({len(url_matches)})')
-        score += 5 * min(len(url_matches), 3)
-
-    # 4. Long base64-looking blobs (obfuscated payloads)
-    if re.search(r'[A-Za-z0-9+/]{60,}={0,2}', text):
-        threats.append('Long base64-like blob — possible obfuscated payload')
-        score += 15
-
-    score = min(score, 100)
+    # Determine risk level
     risk_level = score_to_level(score)
 
-    if not threats:
-        threats.append('No known suspicious signatures detected')
+    # Build threat/result description
+    if prediction == 1:
+        threats = [
+            "AI model classified the message as spam/threat"
+        ]
+        classification = "Spam"
+    else:
+        threats = [
+            "AI model classified the message as legitimate"
+        ]
+        classification = "Ham"
 
+    # Additional information for the frontend
     details = {
-        'char_count': len(text),
-        'word_count': len(text.split()),
-        'matched_keywords': matched_keywords,
-        'ip_count': len(ip_matches),
-        'url_count': len(url_matches),
+        "char_count": len(text),
+        "word_count": len(text.split()),
+        "classification": classification,
+        "spam_probability": round(spam_probability * 100, 2),
+        "model": "TF-IDF + Multinomial Naive Bayes"
     }
 
     return {
-        'risk_score': score,
-        'risk_level': risk_level,
-        'threats': threats,
-        'details': details,
+        "risk_score": score,
+        "risk_level": risk_level,
+        "threats": threats,
+        "details": details
     }
