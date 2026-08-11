@@ -175,42 +175,55 @@ FEARED_KEYWORDS = {
 
 def analyze_text(text: str) -> dict:
     """
-    Analyze text using the trained TF-IDF + Multinomial Naive Bayes model.
-    0 = ham/real
-    1 = spam
+    Analyze text using the trained TF-IDF + Multinomial Naive Bayes model
+    plus suspicious keyword detection.
     """
 
-    # Get prediction
+    # AI model prediction
     prediction = int(TEXT_MODEL.predict([text])[0])
 
-    # Get probability if the classifier supports it
     probabilities = TEXT_MODEL.predict_proba([text])[0]
     spam_probability = float(probabilities[1])
 
-    # Convert spam probability to a 0-100 risk score
+    # AI risk score
     score = round(spam_probability * 100)
 
-    # Determine risk level
+    # Find suspicious keywords
+    matched_keywords = []
+
+    text_lower = text.lower()
+
+    for keyword in FEARED_KEYWORDS:
+        if keyword.lower() in text_lower:
+            matched_keywords.append(keyword)
+            score += 5
+
+    # Keep score between 0 and 100
+    score = min(score, 100)
+
     risk_level = score_to_level(score)
 
-    # Build threat/result description
     if prediction == 1:
+        classification = "Spam"
         threats = [
             "AI model classified the message as spam/threat"
         ]
-        classification = "Spam"
     else:
+        classification = "Ham"
         threats = [
             "AI model classified the message as legitimate"
         ]
-        classification = "Ham"
 
-    # Additional information for the frontend
+    # Add keyword findings
+    for keyword in matched_keywords:
+        threats.append(FEARED_KEYWORDS[keyword])
+
     details = {
         "char_count": len(text),
         "word_count": len(text.split()),
         "classification": classification,
         "spam_probability": round(spam_probability * 100, 2),
+        "matched_keywords": matched_keywords,
         "model": "TF-IDF + Multinomial Naive Bayes"
     }
 
